@@ -3,3 +3,4 @@ fuzzywuzzy
 discord
 asyncio
 cloudscraper
+python-dotenv

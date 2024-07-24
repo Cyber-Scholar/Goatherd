@@ -4,8 +4,22 @@ import cloudscraper
 import discord
 from discord.ext import commands, tasks
 
+import os
+from getpass import getpass
+from dotenv import load_dotenv, find_dotenv
+
 from BountyPackage import Bounty, BountyBoard, PermaBounty
 from StaticSearch import get_core_data, get_country_info_v3
+
+load_dotenv()
+
+discord_token = os.environ.get("TOKEN", None)
+if discord_token is None:
+    discord_token = getpass("What is your discord token?: ")
+    os.environ["TOKEN"] = discord_token
+    with open('.env', 'w') as env_file:
+        env_file.write(f"TOKEN={discord_token}\n")
+    print("Discord token saved")
 
 board = BountyBoard()
 scraper = cloudscraper.create_scraper()
@@ -204,5 +218,7 @@ async def bounty(ctx, *args, result=0):
             title="You took too long to respond!", 
             color=discord.Color.green())
         )
-
-bot.run('MTIwNjM2MDg5MjYxMDk3MzcyNg.GPzflW.gpLKVohT8tYKnOb8ZbBnIuYsiFRZXty2ayolaY')
+try:
+    bot.run(os.environ["TOKEN"])
+except discord.errors.LoginFailure:
+    print("TOKEN ERROR: Please check your token")
