@@ -1,3 +1,4 @@
+# Imports all needed modules
 import asyncio
 
 import cloudscraper
@@ -11,9 +12,13 @@ from dotenv import load_dotenv, find_dotenv
 from BountyPackage import Bounty, BountyBoard, PermaBounty
 from StaticSearch import get_core_data, get_country_info_v3
 
+
+# Imports env vars
 load_dotenv()
 
 discord_token = os.environ.get("TOKEN", None)
+admin_var = os.environ.get("ADMIN", None)
+
 if discord_token is None:
     discord_token = getpass("What is your discord token?: ")
     os.environ["TOKEN"] = discord_token
@@ -21,6 +26,14 @@ if discord_token is None:
         env_file.write(f"TOKEN={discord_token}\n")
     print("Discord token saved")
 
+if admin_var is None:
+    admin_user = getpass("What is your discord username?: ")
+    os.environ["ADMIN"] = admin_user
+    with open('.env', 'w') as env_file:
+        env_file.write(f"TOKEN={admin_user}\n")
+    print("Admin username saved")
+
+# Creates necessary objects
 board = BountyBoard()
 scraper = cloudscraper.create_scraper()
 
@@ -29,6 +42,7 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+# Swipe func
 @tasks.loop(seconds=60)
 async def my_task():
   completed_bounties = board.check_bounties(scraper)
@@ -47,11 +61,13 @@ async def my_task():
       embed.set_image(url=img)
       await user.send(embed=embed)
 
+# Boot
 @bot.event
 async def on_ready():
     print(f'{bot.user} is ready to herd data-goats')
     my_task.start()
 
+# Info command
 @bot.command()
 async def info(ctx):
   embed = discord.Embed(title="Info about Commands", color=discord.Color.green())
@@ -74,9 +90,10 @@ async def info(ctx):
   embed.set_footer(text="All arguments that have spaces needs quotes around them")
   await ctx.send(content=" ", embed=embed)
 
+# Admin command
 @bot.command()
 async def admin(ctx, *args):
-  if ctx.author.name == "cyber_scholar":
+  if ctx.author.name == os.environ["ADMIN"]:
     if "totalWipe" in args:
       board.totalWipe()
       embed = discord.Embed(
@@ -116,6 +133,7 @@ async def admin(ctx, *args):
       )
     await ctx.channel.send(embed=embed)
 
+# Status command
 @bot.command()
 async def status(ctx):
   embed = discord.Embed(
@@ -129,6 +147,7 @@ async def status(ctx):
   )
   await ctx.channel.send(embed=embed)
 
+# Remove command
 @bot.command()
 async def remove(ctx, *args):
   try:
@@ -144,6 +163,7 @@ async def remove(ctx, *args):
   )
   await ctx.channel.send(embed=embed)
 
+# Bounty command
 @bot.command()
 async def bounty(ctx, *args, result=0):
   
@@ -218,6 +238,7 @@ async def bounty(ctx, *args, result=0):
             title="You took too long to respond!", 
             color=discord.Color.green())
         )
+# Tries to run bot
 try:
     bot.run(os.environ["TOKEN"])
 except discord.errors.LoginFailure:
