@@ -22,15 +22,15 @@ admin_var = os.environ.get("ADMIN", None)
 if discord_token is None:
     discord_token = getpass("What is your discord token?: ")
     os.environ["TOKEN"] = discord_token
-    with open('.env', 'w') as env_file:
+    with open('.env', 'a') as env_file:
         env_file.write(f"TOKEN={discord_token}\n")
     print("Discord token saved")
 
 if admin_var is None:
     admin_user = getpass("What is your discord username?: ")
     os.environ["ADMIN"] = admin_user
-    with open('.env', 'w') as env_file:
-        env_file.write(f"TOKEN={admin_user}\n")
+    with open('.env', 'a') as env_file:
+        env_file.write(f"ADMIN={admin_user}\n")
     print("Admin username saved")
 
 # Creates necessary objects
