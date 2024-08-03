@@ -10,7 +10,7 @@ from getpass import getpass
 from dotenv import load_dotenv, find_dotenv
 
 from BountyPackage import Bounty, BountyBoard, PermaBounty
-from StaticSearch import get_core_data, get_country_info_v3
+from StaticSearch import get_core_data, get_batch_core_data, get_country_info_v3
 
 
 # Imports env vars
@@ -67,101 +67,139 @@ async def on_ready():
     print(f'{bot.user} is ready to herd data-goats')
     my_task.start()
 
-# Info command
-@bot.command()
-async def info(ctx):
-  embed = discord.Embed(title="Info about Commands", color=discord.Color.green())
-  embed.add_field(
-    name="__!bounty: Creates a Bounty__",
-    value="!bounty <Shoe Name> <Size> <Amount> <Country>", inline=False
-  )
-  embed.add_field(
-    name="__!info: Provides Command Info__",
-    value="!info", inline=False
-  )
-  embed.add_field(
-    name="__!status: Generates the user's status__",
-    value="!status", inline=False
-  )
-  embed.add_field(
-    name="__!remove: Removes a user's bounty using the bounty ID found in status__",
-    value="!remove <ID>", inline=False
-  )
-  embed.set_footer(text="All arguments that have spaces needs quotes around them")
-  await ctx.send(content=" ", embed=embed)
+    # Info command
+    @bot.command()
+    async def info(ctx):
+      embed = discord.Embed(title="Info about Commands", color=discord.Color.green())
+      embed.add_field(
+        name="__!bounty: Creates a Bounty__",
+        value="!bounty <Shoe Name> <Size> <Amount> <Country>", inline=False
+      )
+      embed.add_field(
+        name="__!info: Provides Command Info__",
+        value="!info", inline=False
+      )
+      embed.add_field(
+        name="__!status: Generates the user's status__",
+        value="!status", inline=False
+      )
+      embed.add_field(
+        name="__!remove: Removes a user's bounty using the bounty ID found in status__",
+        value="!remove <ID>", inline=False
+      )
+      embed.set_footer(text="All arguments that have spaces needs quotes around them")
+      await ctx.send(content=" ", embed=embed)
 
-# Admin command
-@bot.command()
-async def admin(ctx, *args):
-  if ctx.author.name == os.environ["ADMIN"]:
-    if "totalWipe" in args:
-      board.totalWipe()
+    # Admin command
+    @bot.command()
+    async def admin(ctx, *args):
+      if ctx.author.name == os.environ["ADMIN"]:
+        if "totalWipe" in args:
+          board.totalWipe()
+          embed = discord.Embed(
+            title = "Wipe Complete",
+            color=discord.Color.green(),
+          )
+        elif "bountyList" in args:
+          embed = discord.Embed(
+            title = "Bounty List",
+            color=discord.Color.green(),
+            description=str(board)
+          )
+        else:
+          embed = discord.Embed(
+            title = "Admin Panel",
+            color=discord.Color.green(),
+          )
+          embed.add_field(
+            name="__Number of Completed Bounties__",
+            value=board.getCompletedBounties(),
+            inline=False
+          )
+          embed.add_field(
+            name="__Current Length of Board__",
+            value=board.getLength(),
+            inline=False
+          )
+          embed.add_field(
+            name="__Total Wipe Command__",
+            value="!admin totalWipe",
+            inline=False
+          )
+          embed.add_field(
+            name="__Bounty List Command__",
+            value="!admin bountyList",
+            inline=False
+          )
+        await ctx.channel.send(embed=embed)
+
+    # Status command
+    @bot.command()
+    async def status(ctx):
       embed = discord.Embed(
-        title = "Wipe Complete",
+        title = f"User Panel: {ctx.author}",
         color=discord.Color.green(),
       )
-    elif "bountyList" in args:
-      embed = discord.Embed(
-        title = "Bounty List",
-        color=discord.Color.green(),
-        description=str(board)
-      )
-    else:
-      embed = discord.Embed(
-        title = "Admin Panel",
-        color=discord.Color.green(),
-      )
       embed.add_field(
-        name="__Number of Completed Bounties__",
-        value=board.getCompletedBounties(),
+        name="__Open Bounties__",
+        value=board.get_user_bounties(ctx.author),
         inline=False
       )
-      embed.add_field(
-        name="__Current Length of Board__",
-        value=board.getLength(),
-        inline=False
-      )
-      embed.add_field(
-        name="__Total Wipe Command__",
-        value="!admin totalWipe",
-        inline=False
-      )
-      embed.add_field(
-        name="__Bounty List Command__",
-        value="!admin bountyList",
-        inline=False
-      )
-    await ctx.channel.send(embed=embed)
+      await ctx.channel.send(embed=embed)
 
-# Status command
-@bot.command()
-async def status(ctx):
-  embed = discord.Embed(
-    title = f"User Panel: {ctx.author}",
-    color=discord.Color.green(),
-  )
-  embed.add_field(
-    name="__Open Bounties__",
-    value=board.get_user_bounties(ctx.author),
-    inline=False
-  )
-  await ctx.channel.send(embed=embed)
+    # Remove command
+    @bot.command()
+    async def remove(ctx, *args):
+      try:
+        check = board.remove_bounty_at_index(ctx.author, int(args[0]))
+        title = 'No Bounties Found'
+        if check:
+          title = 'Bounty Removed'
+      except Exception:
+        title = 'Please check your arguments and try again'
+      embed = discord.Embed(
+        title = title,
+        color=discord.Color.green(),
+      )
+      await ctx.channel.send(embed=embed)
 
-# Remove command
-@bot.command()
-async def remove(ctx, *args):
-  try:
-    check = board.remove_bounty_at_index(ctx.author, int(args[0]))
-    title = 'No Bounties Found'
-    if check:
-      title = 'Bounty Removed'
-  except Exception:
-    title = 'Please check your arguments and try again'
-  embed = discord.Embed(
-    title = title,
-    color=discord.Color.green(),
-  )
-  await ctx.channel.send(embed=embed)
+    # Batch command
+    @bot.command()
+    async def batch(ctx, *args):
+        await ctx.send(embed=discord.Embed(title="Batch search", color=discord.Color.green()))
+        country, currency = get_country_info_v3(scraper, args[3])
+        shoe_list = get_batch_core_data(scraper, args[0])
+        if id is None:
+            embed = discord.Embed(
+            title="No more matches exist", 
+            color=discord.Color.green()
+            )
+            await ctx.channel.send(embed=embed)
+        else:
+            shoe_string = '\n'.join(shoe_list)
+            embed = discord.Embed(title="Batch Bounty Request", color=discord.Color.green())
+            embed.add_field(
+                name="Shoes",
+                value=shoe_string,
+                inline=False
+            )
+            embed.add_field(
+            name="Size",
+            value=args[1],
+            inline=False
+            )
+            embed.add_field(
+                name="Price",
+                value=args[2] + " " + currency,
+                inline=False
+            )
+            embed.add_field(
+                name="Confirm?",
+                value="One-time Bounty (o) or Permanent Bounty (p) or No (n)",
+                inline=False
+            )
+            await ctx.channel.send(embed=embed)
+
 
 # Bounty command
 @bot.command()

@@ -43,3 +43,10 @@ def get_core_data(scraper, query, result=0):
     shoe = initial[result]
     return shoe["data"]["id"], shoe["data"]["slug"], shoe["value"], shoe['data']["image_url"]
   return None, None, None, None
+
+def get_batch_core_data(scraper, query):
+  list = scraper.get(f"https://ac.cnstrc.com/search/{query.replace(' ','%20')}?c=ciojs-client-2.35.2&key=key_XT7bjdbvjgECO5d8&i=bbde1232-e0be-41e3-a7da-04909b345282&s=2&")
+  initial = json.loads(list.text)["response"]["results"]
+  if initial is not None:
+    return [i['value'] for i in initial]
+  return None
