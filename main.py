@@ -6,10 +6,12 @@ import discord
 from discord.ext import commands, tasks
 
 import os
+import time
+
 from getpass import getpass
 from dotenv import load_dotenv, find_dotenv
 
-from BountyPackage import Bounty, BountyBoard, PermaBounty
+from BountyPackage import Bounty, BountyBoard, PermaBounty, BatchBounty
 from StaticSearch import get_core_data, get_batch_core_data, get_country_info_v3
 
 
@@ -46,20 +48,33 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 @tasks.loop(seconds=60)
 async def my_task():
   completed_bounties = board.check_bounties(scraper)
+  #print(completed_bounties)
   if len(completed_bounties) > 0:
     for bounty in completed_bounties:
       board.updateCompletedBounties()
       bounty_data = bounty['Bounty Data']
       user = bounty['User']
-      img = bounty['Image']
+      #img = bounty['Image']
       embed=discord.Embed(
-        title=f"Bounty Completed for {bounty_data[0]}!",
-        color=discord.Color.green(),
-        description=f"They are now available for sale for around {bounty['Price']}",
-        url=bounty_data[1]
-      )
-      embed.set_image(url=img)
+            title=f"Bounty Completed for {bounty_data[0]}!",
+            color=discord.Color.green(),
+            description=f"They are now available for sale for around {bounty['Price']}",
+            url=bounty_data[1]
+        )
       await user.send(embed=embed)
+      #  time.sleep(5)
+
+     
+      #print(len(bounty_data))
+      #for i in bounty_data[1]:
+      #  embed=discord.Embed(
+      #      title=f"Bounty Completed for {bounty_data[0]}!",
+      #      color=discord.Color.green(),
+      #      description=f"They are now available for sale for around {bounty['Price']}",
+      #      url=i
+      #  )
+      #  await user.send(embed=embed)
+      #  time.sleep(5)
 
 # Boot
 @bot.event
@@ -86,6 +101,10 @@ async def on_ready():
       embed.add_field(
         name="__!remove: Removes a user's bounty using the bounty ID found in status__",
         value="!remove <ID>", inline=False
+      )
+      embed.add_field(
+        name="__!batch: Creates a Permanent Batch Bounty__",
+        value="!batch <Shoe Name> <Size> <Amount> <Country>", inline=False
       )
       embed.set_footer(text="All arguments that have spaces needs quotes around them")
       await ctx.send(content=" ", embed=embed)
@@ -166,10 +185,15 @@ async def on_ready():
     # Batch command
     @bot.command()
     async def batch(ctx, *args):
-        await ctx.send(embed=discord.Embed(title="Batch search", color=discord.Color.green()))
+
+        def check(message):
+            return ctx.author == message.author and ctx.channel == message.channel
+        
         country, currency = get_country_info_v3(scraper, args[3])
+        
         shoe_list = get_batch_core_data(scraper, args[0])
-        if id is None:
+        
+        if shoe_list is None:
             embed = discord.Embed(
             title="No more matches exist", 
             color=discord.Color.green()
@@ -195,11 +219,34 @@ async def on_ready():
             )
             embed.add_field(
                 name="Confirm?",
-                value="One-time Bounty (o) or Permanent Bounty (p) or No (n)",
+                value="Yes (y) or No (n)",
                 inline=False
             )
             await ctx.channel.send(embed=embed)
-
+            try:
+                user_message = await bot.wait_for('message', check=check, timeout=60.0)
+                confirm_title = "Error"
+                if user_message.content == "n":
+                    confirm_title = "Bounty Discarded"
+                else:
+                    country, currency = get_country_info_v3(scraper, args[3])
+                    temp = BatchBounty(
+                            args[0], args[1], float(args[2]), country, currency, ctx.author
+                    )
+                    board.add_bounty(temp)
+                    confirm_title = "Bounty Confirmed"
+                await ctx.send(embed=
+                    discord.Embed(
+                        title=confirm_title, 
+                        color=discord.Color.green()
+                        )
+                    )
+            except asyncio.TimeoutError:
+                await ctx.send(embed=
+                    discord.Embed(
+                    title="You took too long to respond!", 
+                    color=discord.Color.green())
+                )
 
 # Bounty command
 @bot.command()
