@@ -20,7 +20,7 @@ class Bounty:
     shoes = json.loads(output.text)
     for shoe in shoes['products']:
       if 5 + self.target_price >= round((shoe['priceCents'] / 100) * rate, 2):
-        return self.url
+        return [self.url]
     return []
 
   def returnType(self):
@@ -50,12 +50,12 @@ class PermaBounty(Bounty):
       if 5 + self.target_price >= round((shoe['priceCents'] / 100) * rate, 2): 
         if shoe['id'] not in self.items:
           self.items.append(shoe['id'])
-          return self.url
+          return [self.url]
     return []
   
   def returnType(self):
     return 'PermaBounty'
-###:wq
+###
 class BatchBounty(PermaBounty):
     def __init__(self, name, size, price, country, currency, user):
         super().__init__(name, size, price, country, currency, user, 0, 0, 0) 
@@ -72,7 +72,7 @@ class BatchBounty(PermaBounty):
                 if 5 + self.target_price >= round((shoe['priceCents'] / 100) * rate, 2): 
                     if shoe['id'] not in self.items:
                         self.items.append(shoe['id'])
-                        available_shoes.append(f"https://www.goat.com/sneakers/{slug}")
+                        available_shoes.append((value, f"https://www.goat.com/sneakers/{slug}"))
         return available_shoes
         
     def returnType(self):
@@ -136,11 +136,13 @@ class BountyBoard:
         temp = i.check_validity(scraper)
         if temp != []:
             for j in temp: 
+                name = i.name if i.returnType() != "BatchBounty" else j[0]
+                link = i.name if i.returnType() != "BatchBounty" else j[1]
                 arr.append({
-                    'Bounty Data':[i.name, j],       
+                    'Bounty Data':[name, link],       
                     'User':i.user, 
                     'Price':f"{i.target_price} {i.currency}",
-                    #'Image':j
+                    'Size':i.size
                 })
         if i.returnType() == 'One-time Bounty':
           self.remove_bounty(i)
@@ -153,10 +155,8 @@ class BountyBoard:
     string = '----------\n'
     if len(self._bounties) == 0:
       return string + 'Empty'
-    index = 0
-    for i in self._bounties:
+    for index, i in enumerate(self._bounties):
       string+=f'Relative ID: {index}\n'
       string+=str(i)+"\n"
       string+='----------\n'
-      index += 1
     return string 

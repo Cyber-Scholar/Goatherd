@@ -54,11 +54,13 @@ async def my_task():
       board.updateCompletedBounties()
       bounty_data = bounty['Bounty Data']
       user = bounty['User']
+      size = bounty['Size']
+      price = bounty['Price']
       #img = bounty['Image']
       embed=discord.Embed(
             title=f"Bounty Completed for {bounty_data[0]}!",
             color=discord.Color.green(),
-            description=f"They are now available for sale for around {bounty['Price']}",
+            description=f"Price: around {price} | Size: {size}",
             url=bounty_data[1]
         )
       await user.send(embed=embed)
