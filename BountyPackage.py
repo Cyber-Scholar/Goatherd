@@ -20,7 +20,7 @@ class Bounty:
     shoes = json.loads(output.text)
     for shoe in shoes['products']:
       if 5 + self.target_price >= round((shoe['priceCents'] / 100) * rate, 2):
-        return [self.url]
+        return [self.url, boxCondition]
     return []
 
   def returnType(self):
@@ -50,29 +50,37 @@ class PermaBounty(Bounty):
       if 5 + self.target_price >= round((shoe['priceCents'] / 100) * rate, 2): 
         if shoe['id'] not in self.items:
           self.items.append(shoe['id'])
-          return [self.url]
+          return [self.url, shoe['boxCondition']]
     return []
   
   def returnType(self):
     return 'PermaBounty'
 ###
 class BatchBounty(PermaBounty):
-    def __init__(self, name, size, price, country, currency, user):
+    def __init__(self, name, exclude, size, end_size, price, country, currency, user):
         super().__init__(name, size, price, country, currency, user, 0, 0, 0) 
-    
+        self.end_size = end_size
+        self.excludeList = {"Wmns", "GS", "PS", "TD"}
+        if exclude == "none":
+            self.excludeList.clear()
+        elif exclude in self.excludeList:
+            self.excludeList.remove(self.exclude)
+
     def check_validity(self, scraper):
-        shoe_list = get_batch_core_data(scraper, self.name)
+        shoe_list = get_batch_core_data(scraper, self.name, self.excludeList)
+        print(shoe_list)
         available_shoes = []
         for shoe_name in shoe_list:
-            id, slug, value, img = get_core_data(scraper, shoe_name)
-            rate = get_country_info_v2(scraper, self.country)
-            output = scraper.get(f"https://www.goat.com/web-api/v1/products/search?productTemplateId={id}&shoeCondition=used&size={self.size}&sortBy=size&countryCode={self.country}")
-            shoes = json.loads(output.text)
-            for shoe in shoes['products']:
-                if 5 + self.target_price >= round((shoe['priceCents'] / 100) * rate, 2): 
-                    if shoe['id'] not in self.items:
-                        self.items.append(shoe['id'])
-                        available_shoes.append((value, f"https://www.goat.com/sneakers/{slug}"))
+            for size in range(int(self.size), int(self.end_size) + 1):
+                id, slug, value, img = get_core_data(scraper, shoe_name)
+                rate = get_country_info_v2(scraper, self.country)
+                output = scraper.get(f"https://www.goat.com/web-api/v1/products/search?productTemplateId={id}&shoeCondition=used&size={size}&sortBy=size&countryCode={self.country}")
+                shoes = json.loads(output.text)
+                for shoe in shoes['products']:
+                    if 5 + self.target_price >= round((shoe['priceCents'] / 100) * rate, 2): 
+                        if shoe['id'] not in self.items and not any(j.lower() in shoe["slug"] for j in self.excludeList):
+                            self.items.append(shoe['id'])
+                            available_shoes.append((value, f"https://www.goat.com/sneakers/{slug}", shoe["boxCondition"], size))
         return available_shoes
         
     def returnType(self):
@@ -137,12 +145,13 @@ class BountyBoard:
         if temp != []:
             for j in temp: 
                 name = i.name if i.returnType() != "BatchBounty" else j[0]
-                link = i.name if i.returnType() != "BatchBounty" else j[1]
+                link = j[0] if i.returnType() != "BatchBounty" else j[1]
                 arr.append({
                     'Bounty Data':[name, link],       
                     'User':i.user, 
                     'Price':f"{i.target_price} {i.currency}",
-                    'Size':i.size
+                    'Size':i.size if i.returnType() != "BatchBounty" else j[3],
+                    'Box Condition':j[1] if i.returnType() != "BatchBounty" else j[2] 
                 })
         if i.returnType() == 'One-time Bounty':
           self.remove_bounty(i)

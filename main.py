@@ -56,11 +56,11 @@ async def my_task():
       user = bounty['User']
       size = bounty['Size']
       price = bounty['Price']
-      #img = bounty['Image']
+      boxCondition = bounty['Box Condition']
       embed=discord.Embed(
             title=f"Bounty Completed for {bounty_data[0]}!",
             color=discord.Color.green(),
-            description=f"Price: around {price} | Size: {size}",
+            description=f"Price: around {price} | Size: {size} | Box Condition: {boxCondition}",
             url=bounty_data[1]
         )
       await user.send(embed=embed)
@@ -106,7 +106,7 @@ async def on_ready():
       )
       embed.add_field(
         name="__!batch: Creates a Permanent Batch Bounty__",
-        value="!batch <Shoe Name> <Size> <Amount> <Country>", inline=False
+        value="!batch <Shoe Name> <Exclude> <Start Size> <End Size> <Amount> <Country>", inline=False
       )
       embed.set_footer(text="All arguments that have spaces needs quotes around them")
       await ctx.send(content=" ", embed=embed)
@@ -190,11 +190,8 @@ async def on_ready():
 
         def check(message):
             return ctx.author == message.author and ctx.channel == message.channel
-        
-        country, currency = get_country_info_v3(scraper, args[3])
-        
         shoe_list = get_batch_core_data(scraper, args[0])
-        
+        country, currency = get_country_info_v3(scraper, args[5])
         if shoe_list is None:
             embed = discord.Embed(
             title="No more matches exist", 
@@ -205,18 +202,23 @@ async def on_ready():
             shoe_string = '\n'.join(shoe_list)
             embed = discord.Embed(title="Batch Bounty Request", color=discord.Color.green())
             embed.add_field(
-                name="Shoes",
-                value=shoe_string,
+                name="Shoe String",
+                value=args[0],
+                inline=False
+            )
+            embed.add_field(
+                name="Exclude",
+                value=args[1],
                 inline=False
             )
             embed.add_field(
             name="Size",
-            value=args[1],
+            value=f"{args[2]} to {args[3]}",
             inline=False
             )
             embed.add_field(
                 name="Price",
-                value=args[2] + " " + currency,
+                value=args[4] + " " + currency,
                 inline=False
             )
             embed.add_field(
@@ -231,9 +233,9 @@ async def on_ready():
                 if user_message.content == "n":
                     confirm_title = "Bounty Discarded"
                 else:
-                    country, currency = get_country_info_v3(scraper, args[3])
+                    country, currency = get_country_info_v3(scraper, args[5])
                     temp = BatchBounty(
-                            args[0], args[1], float(args[2]), country, currency, ctx.author
+                            args[0], args[1], args[2], args[3], float(args[4]), country, currency, ctx.author
                     )
                     board.add_bounty(temp)
                     confirm_title = "Bounty Confirmed"
@@ -262,7 +264,7 @@ async def bounty(ctx, *args, result=0):
       await ctx.send(embed=embed)
       return
     country, currency = get_country_info_v3(scraper, args[3])
-    id, slug, value, img = get_core_data(scraper, args[0], result)
+    id, slug, value, img = get_core_data(scraper, args[0], result) 
     if id is None:
       embed = discord.Embed(
         title="No more matches exist", 
