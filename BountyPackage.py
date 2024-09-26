@@ -1,3 +1,4 @@
+import datetime
 import json
 
 from StaticSearch import get_country_info_v2, get_batch_core_data, get_core_data
@@ -79,8 +80,10 @@ class BatchBounty(PermaBounty):
                 for shoe in shoes['products']:
                     if 5 + self.target_price >= round((shoe['priceCents'] / 100) * rate, 2): 
                         if shoe['id'] not in self.items and not any(j.lower() in shoe["slug"] for j in self.excludeList):
-                            self.items.append(shoe['id'])
-                            available_shoes.append((value, f"https://www.goat.com/sneakers/{slug}", shoe["boxCondition"], size))
+                            dt = datetime.datetime.strptime(shoe["createdAt"].split('T')[0], "%Y-%m-%d").date()
+                            if dt == datetime.date.today(): 
+                                self.items.append(shoe['id'])
+                                available_shoes.append((value, f"https://www.goat.com/sneakers/{slug}", shoe["boxCondition"], size))
         return available_shoes
         
     def returnType(self):
